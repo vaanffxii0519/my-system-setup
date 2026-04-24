@@ -7,7 +7,7 @@ echo "🚀 Starting System Provisioning (The Power User Golden Flow)..."
 # 1. ติดตั้งเครื่องมือพื้นฐาน, ฟอนต์ JetBrains Mono และสภาพแวดล้อม Python
 echo "📦 1/8 Updating system and installing base packages..."
 sudo apt update && sudo apt upgrade -y
-sudo apt install -y build-essential curl wget git software-properties-common apt-transport-https ca-certificates gnupg lsb-release fonts-jetbrains-mono python3 python3-pip python3-venv
+sudo apt install -y build-essential curl wget git software-properties-common apt-transport-https ca-certificates gnupg lsb-release fonts-jetbrains-mono python3 python3-pip python3-venv pre-commit
 
 # 2. ติดตั้ง Docker Engine
 if ! command -v docker &> /dev/null; then
@@ -83,19 +83,13 @@ else
     echo "✅ 6/8 NVM is already installed."
 fi
 
-# 7. ติดตั้ง pre-commit (Global Tool)
-echo "🔍 7/8 Installing pre-commit tool..."
-
-# ติดตั้งผ่าน pip3 สำหรับ User ปัจจุบัน
-python3 -m pip install --user pre-commit --break-system-packages || python3 -m pip install --user pre-commit
-
-# เพิ่ม Local Bin เข้า PATH ชั่วคราวเพื่อให้สคริปต์รันต่อได้ (ส่วนการตั้งค่าถาวรจะไปอยู่ที่ Chezmoi)
-export PATH="$HOME/.local/bin:$PATH"
-
+# 7. ตรวจสอบ pre-commit (Global Tool)
+echo "🔍 7/8 Verifying pre-commit installation..."
 if command -v pre-commit &> /dev/null; then
-    echo "✅ pre-commit tool installed: $(pre-commit --version)"
+    echo "✅ pre-commit tool is ready: $(pre-commit --version)"
 else
-    echo "⚠️ Warning: pre-commit installed but not found in PATH."
+    echo "❌ Error: pre-commit installation failed."
+    exit 1
 fi
 
 # 8. ติดตั้ง Chezmoi และบังคับดึง Config เข้าระบบ
