@@ -1,0 +1,31 @@
+# 1. Secret Files (ห้ามหลุดเด็ดขาด)
+.env
+.env.*
+*.tmp
+
+# 2. Dynamic Data / Database (ห้ามทับของจริงบนเซิร์ฟเวอร์)
+battery_status.json
+devices.json
+
+# 3. Python Environments & Cache
+venv/
+__pycache__/
+*.pyc
+
+# 4. Logs & Flag files
+logs/
+*.log
+*.flag
+*.heartbeat
+
+# 5. Editor Config & Binaries
+.vscode/
+go2rtc
+
+# 6. Database (SQLite)
+*.db
+*.db-wal
+*.db-shm
+
+# 7. Other
+*.xml

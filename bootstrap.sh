@@ -5,28 +5,28 @@ set -e
 echo "🚀 Starting System Provisioning (The Power User Golden Flow)..."
 
 # 1. ติดตั้งเครื่องมือพื้นฐาน, ฟอนต์ JetBrains Mono และสภาพแวดล้อม Python
-echo "📦 1/7 Updating system and installing base packages..."
+echo "📦 1/8 Updating system and installing base packages..."
 sudo apt update && sudo apt upgrade -y
 sudo apt install -y build-essential curl wget git software-properties-common apt-transport-https ca-certificates gnupg lsb-release fonts-jetbrains-mono python3 python3-pip python3-venv
 
 # 2. ติดตั้ง Docker Engine
 if ! command -v docker &> /dev/null; then
-    echo "🐳 2/7 Installing Docker Engine..."
+    echo "🐳 2/8 Installing Docker Engine..."
     sudo install -m 0755 -d /etc/apt/keyrings
     sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
     sudo chmod a+r /etc/apt/keyrings/docker.asc
     echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$UBUNTU_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
     sudo apt update
     sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-    
+
     # เพิ่ม User ปัจจุบันเข้า Group Docker เพื่อให้ใช้คำสั่ง docker ได้โดยไม่ต้องพิมพ์ sudo ในอนาคต
     sudo usermod -aG docker $USER
 else
-    echo "✅ 2/7 Docker is already installed."
+    echo "✅ 2/8 Docker is already installed."
 fi
 
 # 3. ติดตั้งและรัน Portainer (ใช้ sudo นำหน้าเพราะเพิ่งแอด Group เมื่อกี้ Shell ยังไม่รับทราบ)
-echo "🚢 3/7 Setting up Portainer..."
+echo "🚢 3/8 Setting up Portainer..."
 # สร้าง Volume เก็บข้อมูล (ถ้ามีอยู่แล้วคำสั่ง || true จะช่วยไม่ให้สคริปต์พัง)
 sudo docker volume create portainer_data || true
 
@@ -47,7 +47,7 @@ fi
 
 # 4. ติดตั้ง VS Code
 if ! command -v code &> /dev/null; then
-    echo "💻 4/7 Installing VS Code..."
+    echo "💻 4/8 Installing VS Code..."
     wget -qO- https://packages.microsoft.com/keys/microsoft.asc | gpg --dearmor > packages.microsoft.gpg
     sudo install -D -o root -g root -m 644 packages.microsoft.gpg /etc/apt/keyrings/packages.microsoft.gpg
     echo "deb [arch=amd64,arm64,armhf signed-by=/etc/apt/keyrings/packages.microsoft.gpg] https://packages.microsoft.com/repos/code stable main" | sudo tee /etc/apt/sources.list.d/vscode.list > /dev/null
@@ -55,40 +55,55 @@ if ! command -v code &> /dev/null; then
     sudo apt update
     sudo apt install -y code
 else
-    echo "✅ 4/7 VS Code is already installed."
+    echo "✅ 4/8 VS Code is already installed."
 fi
 
 # 5. ติดตั้ง TLP (ตรวจจับ ThinkPad หรือ Lenovo อัตโนมัติ)
 if [[ $(cat /sys/class/dmi/id/chassis_vendor 2>/dev/null) == *"Lenovo"* ]] || [[ $(hostname) == *"ThinkPad"* ]]; then
-    echo "🔋 5/7 Lenovo/ThinkPad detected. Installing TLP..."
+    echo "🔋 5/8 Lenovo/ThinkPad detected. Installing TLP..."
     sudo apt install -y tlp tlp-rdw
     sudo tlp start
 else
-    echo "⏩ 5/7 Skipping TLP (Not a Lenovo/ThinkPad)."
+    echo "⏩ 5/8 Skipping TLP (Not a Lenovo/ThinkPad)."
 fi
 
 # 6. ติดตั้ง NVM และ Node.js LTS
 if [ ! -d "$HOME/.nvm" ]; then
-    echo "🟢 6/7 Installing NVM and Node.js LTS..."
+    echo "🟢 6/8 Installing NVM and Node.js LTS..."
     curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.1/install.sh | bash
-    
+
     # Reload Shell Environment สดๆ เพื่อให้สคริปต์รู้จักคำสั่ง nvm ทันที
     export NVM_DIR="$HOME/.nvm"
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-    
+
     # ติดตั้ง Node ล่าสุด (LTS) และตั้งเป็น Default
     nvm install --lts
     nvm alias default 'lts/*'
 else
-    echo "✅ 6/7 NVM is already installed."
+    echo "✅ 6/8 NVM is already installed."
 fi
 
-# 7. ติดตั้ง Chezmoi และบังคับดึง Config เข้าระบบ
+# 7. ติดตั้ง pre-commit (Global Tool)
+echo "🔍 7/8 Installing pre-commit tool..."
+
+# ติดตั้งผ่าน pip3 สำหรับ User ปัจจุบัน
+python3 -m pip install --user pre-commit --break-system-packages || python3 -m pip install --user pre-commit
+
+# เพิ่ม Local Bin เข้า PATH ชั่วคราวเพื่อให้สคริปต์รันต่อได้ (ส่วนการตั้งค่าถาวรจะไปอยู่ที่ Chezmoi)
+export PATH="$HOME/.local/bin:$PATH"
+
+if command -v pre-commit &> /dev/null; then
+    echo "✅ pre-commit tool installed: $(pre-commit --version)"
+else
+    echo "⚠️ Warning: pre-commit installed but not found in PATH."
+fi
+
+# 8. ติดตั้ง Chezmoi และบังคับดึง Config เข้าระบบ
 if ! command -v chezmoi &> /dev/null; then
-    echo "🏠 7/7 Installing Chezmoi..."
+    echo "🏠 8/8 Installing Chezmoi..."
     sudo curl -sfL https://git.io/chezmoi | sudo sh -s -- -b /usr/local/bin
 else
-    echo "✅ 7/7 Chezmoi is already installed."
+    echo "✅ 8/8 Chezmoi is already installed."
 fi
 
 echo "🪄 Applying configurations via Chezmoi..."
